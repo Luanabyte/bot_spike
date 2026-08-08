@@ -1,34 +1,36 @@
-name: Python Package using Conda
+name: Enviar Print do Looker para SeaTalk
 
-on: [push]
+on:
+  schedule:
+    # Executa de segunda a sexta-feira às 07:30 UTC (Ajuste o cron conforme sua preferência de horário)
+    - cron: '30 7 * * 1-5'
+  workflow_dispatch: # Permite disparar manualmente direto pela aba Actions do GitHub
 
 jobs:
-  build-linux:
+  run-bot:
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 5
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.10'
-    - name: Add conda to system path
-      run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        echo $CONDA/bin >> $GITHUB_PATH
-    - name: Install dependencies
-      run: |
-        conda env update --file environment.yml --name base
-    - name: Lint with flake8
-      run: |
-        conda install flake8
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test with pytest
-      run: |
-        conda install pytest
-        pytest
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Instalar Dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Instalar Google Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
+      - name: Executar o Bot
+        env:
+          LOOKER_URL: https://datastudio.google.com/u/0/reporting/381b9841-a980-41cb-9a7d-a7216bad7518/page/p_cm7j7npe2d
+          SEATALK_WEBHOOK_URL: ${{ secrets.SEATALK_WEBHOOK_URL }}
+        run: |
+          python bot.py
