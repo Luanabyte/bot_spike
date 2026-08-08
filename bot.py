@@ -7,7 +7,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import requests
 
-# Variáveis injetadas pelo ambiente do GitHub Actions
 LOOKER_URL = os.getenv("LOOKER_URL")
 SEATALK_WEBHOOK_URL = os.getenv("SEATALK_WEBHOOK_URL")
 
@@ -27,17 +26,16 @@ def rodar_automacao():
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
 
     driver = webdriver.Chrome(options=chrome_options)
 
     try:
-        # Adiciona o parâmetro &nav=0 para ocultar a barra superior e deixar o print limpo
         url_base = f"{LOOKER_URL}&nav=0"
         print("Acessando o Looker Studio...")
         driver.get(url_base)
         
-        # Tempo de espera generoso para garantir que o dashboard carregue os dados da Pág 1
         time.sleep(15)
 
         # --- PÁGINA 1 ---
@@ -48,13 +46,13 @@ def rodar_automacao():
 
         # --- NAVEGAR PARA A PÁGINA 2 ---
         print("Navegando para a Página 2...")
-        # Localiza e clica no botão de próxima página do Looker Studio
+        
+        # Tentativa de achar o botão de próxima página de forma mais ampla
         botao_proxima = WebDriverWait(driver, 15).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, "button[aria-label*='Next page'], button[aria-label*='Próxima página'], div[aria-label*='Next page']"))
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "button[aria-label*='Next'], button[aria-label*='Próxima'], div[aria-label*='Next'], div[aria-label*='Próxima']"))
         )
         botao_proxima.click()
         
-        # Aguarda a renderização dos dados da Página 2
         time.sleep(10)
 
         # --- PÁGINA 2 ---
@@ -63,10 +61,15 @@ def rodar_automacao():
         driver.save_screenshot(path_p2)
         enviar_para_seatalk(path_p2, "Relatório - Página 2")
 
+    except Exception as e:
+        print(f"Ocorreu um erro durante a execução: {str(e)}")
+        driver.save_screenshot("erro_captura.png")
+        raise e
+
     finally:
         driver.quit()
 
 if __name__ == "__main__":
     if not LOOKER_URL or not SEATALK_WEBHOOK_URL:
-        raise ValueError("As variáveis de ambiente LOOKER_URL e SEATALK_WEBHOOK_URL precisam estar configuradas.")
+        raise ValueError("Variáveis de ambiente ausentes.")
     rodar_automacao()
